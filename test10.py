@@ -4,7 +4,6 @@ import cv2
 import matplotlib.pyplot as plt
 import sys
 
-
 class ImageViewer(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
@@ -24,7 +23,9 @@ class ImageViewer(QtWidgets.QWidget):
         self.gray_image_label = QtWidgets.QLabel(self)
         self.hist_label = QtWidgets.QLabel(self)
         self.gray_hist_label = QtWidgets.QLabel(self)
-
+        self.stretch_button = QtWidgets.QPushButton("Rozciągnij histogram")
+        self.equalize_button = QtWidgets.QPushButton("Wyrównaj histogram")
+       
         # Ustawienie layoutu
         layout = QtWidgets.QGridLayout()
         layout.addWidget(self.open_button, 0, 0)
@@ -36,6 +37,8 @@ class ImageViewer(QtWidgets.QWidget):
         layout.addWidget(self.gray_image_label, 1, 1, 5, 1)
         layout.addWidget(self.hist_label, 1, 2, 2, 2)
         layout.addWidget(self.gray_hist_label, 3, 2, 2, 2)
+        layout.addWidget(self.stretch_button, 0, 5)
+        layout.addWidget(self.equalize_button, 0, 6)
         self.setLayout(layout)
 
         # Podpięcie przycisków do funkcji
@@ -44,6 +47,8 @@ class ImageViewer(QtWidgets.QWidget):
         self.hist_button.clicked.connect(self.show_histogram)
         self.hist_table_button.clicked.connect(self.show_histogram_table)
         self.profile_button.clicked.connect(self.show_profile)
+        self.stretch_button.clicked.connect(self.histogram_stretching)
+        self.equalize_button.clicked.connect(self.histogram_equalization)
 
     def open_image(self):
         # Otwieranie obrazu z pliku
@@ -132,6 +137,26 @@ class ImageViewer(QtWidgets.QWidget):
         x = np.arange(self.gray_image.shape[1])
         y = np.sum(profile, axis=0)
         return x, y
+
+    def histogram_stretching(self):
+        if self.gray_image is not None:
+            # Obliczenie minimalnej i maksymalnej wartości pikseli w obrazie szaroodcieniowym
+            min_val, max_val, _, _ = cv2.minMaxLoc(self.gray_image)
+
+            # Przeprowadzenie rozciągania histogramu
+            stretched_image = ((self.gray_image - min_val) / (max_val - min_val)) * 255
+            stretched_image = stretched_image.astype(np.uint8)
+
+            # Wyświetlenie obrazu po rozciągnięciu histogramu
+            self.show_gray_image(stretched_image)
+   
+    def histogram_equalization(self):
+        if self.gray_image is not None:
+            # Przeprowadzenie wyrównania histogramu przez equalizację
+            equalized_image = cv2.equalizeHist(self.gray_image)
+
+            # Wyświetlenie obrazu po wyrównaniu histogramu
+            self.show_gray_image(equalized_image)
 
 
 if __name__ == "__main__":
