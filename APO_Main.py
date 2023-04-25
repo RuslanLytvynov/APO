@@ -13,6 +13,14 @@ class ImageViewer(QtWidgets.QWidget):
         self.hist = None
         self.gray_hist = None
 
+        self.menubar = QtWidgets.QMenuBar(self)
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 570, 30))
+        self.menubar.setObjectName("menubar")
+
+        self.menuLab1 = QtWidgets.QMenu(self.menubar)
+        self.menuLab1.setObjectName("menuLab1")
+        self.menuLab1.setTitle("Lab1")
+
         # Przyciski i etykiety
         self.open_button = QtWidgets.QPushButton("Otwórz obraz")
         self.gray_button = QtWidgets.QPushButton("Przekształć do obrazu szaroodcieniowego")
@@ -25,6 +33,9 @@ class ImageViewer(QtWidgets.QWidget):
         self.gray_hist_label = QtWidgets.QLabel(self)
         self.stretch_button = QtWidgets.QPushButton("Rozciągnij histogram")
         self.equalize_button = QtWidgets.QPushButton("Wyrównaj histogram")
+        self.negate_button = QtWidgets.QPushButton("Negacja")
+        self.posterize_button = QtWidgets.QPushButton("Redukcja poziomów szarości")
+        self.selective_stretch_button = QtWidgets.QPushButton("Rozciąganie selektywne")
        
         # Ustawienie layoutu
         layout = QtWidgets.QGridLayout()
@@ -39,6 +50,9 @@ class ImageViewer(QtWidgets.QWidget):
         layout.addWidget(self.gray_hist_label, 3, 2, 2, 2)
         layout.addWidget(self.stretch_button, 0, 5)
         layout.addWidget(self.equalize_button, 0, 6)
+        layout.addWidget(self.negate_button, 1, 5)
+        layout.addWidget(self.posterize_button, 1, 6)
+        layout.addWidget(self.selective_stretch_button, 1, 7)
         self.setLayout(layout)
 
         # Podpięcie przycisków do funkcji
@@ -49,7 +63,9 @@ class ImageViewer(QtWidgets.QWidget):
         self.profile_button.clicked.connect(self.show_profile)
         self.stretch_button.clicked.connect(self.histogram_stretching)
         self.equalize_button.clicked.connect(self.histogram_equalization)
-
+        self.negate_button.clicked.connect(self.negate)
+        self.posterize_button.clicked.connect(self.posterize)
+        self.selective_stretch_button.clicked.connect(self.selective_stretch)
     def open_image(self):
         # Otwieranie obrazu z pliku
         filename, _ = QtWidgets.QFileDialog.getOpenFileName(
@@ -158,6 +174,33 @@ class ImageViewer(QtWidgets.QWidget):
             # Wyświetlenie obrazu po wyrównaniu histogramu
             self.show_gray_image(equalized_image)
 
+    def negate(self):
+        if self.gray_image is not None:
+            # Negacja obrazu
+            negated_image = 255 - self.gray_image
+
+            # Wyświetlenie obrazu po negacji
+            self.show_gray_image(negated_image)
+
+    def posterize(self):
+        if self.gray_image is not None:
+            # Przeprowadzenie posterizacji obrazu
+            posterized_image = np.where(self.gray_image < 64, 32, self.gray_image)
+            posterized_image = np.where(posterized_image < 128, 96, posterized_image)
+            posterized_image = np.where(posterized_image < 192, 160, posterized_image)
+            posterized_image = np.where(posterized_image < 256, 224, posterized_image)
+
+            # Wyświetlenie obrazu po posterizacji
+            self.show_gray_image(posterized_image)
+
+    def selective_stretch(self):
+        if self.gray_image is not None:
+            # Przeprowadzenie rozciągania histogramu
+            stretched_image = ((self.gray_image - 0) / (255 - 0)) * 255
+            stretched_image = stretched_image.astype(np.uint8)
+
+            # Wyświetlenie obrazu po rozciągnięciu histogramu
+            self.show_gray_image(stretched_image)
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
