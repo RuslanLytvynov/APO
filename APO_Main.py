@@ -160,6 +160,58 @@ class ImageWindow(QWidget):
         self.action_negation.triggered.connect(self.negation)
         self.action_posterization.triggered.connect(self.posterization)
         self.action_selective_stretching.triggered.connect(self.selective_stretching)
+
+        # Adding Lab3 menu
+        self.menu_lab3 = QtWidgets.QMenu(self.menubar)
+        self.menu_lab3.setObjectName("menuLab3")
+        self.menu_lab3.setTitle("Lab3")
+
+        # Creating Blur action
+        self.actionBlur = QtWidgets.QAction(self)
+        self.actionBlur.setText("Blur")
+        self.actionBlur.setStatusTip("Blur")
+        self.actionBlur.setObjectName("actionBlur")
+
+        # Creating Sobel action
+        self.actionSobel = QtWidgets.QAction(self)
+        self.actionSobel.setText("Sobel")
+        self.actionSobel.setStatusTip("Sobel")
+        self.actionSobel.setObjectName("actionSobel")
+
+        # Creating Laplacian action
+        self.actionLaplacian = QtWidgets.QAction(self)
+        self.actionLaplacian.setText("Laplacian")
+        self.actionLaplacian.setStatusTip("Laplacian")
+        self.actionLaplacian.setObjectName("actionLaplacian")
+
+        # Creating Canny action
+        self.actionCanny = QtWidgets.QAction(self)
+        self.actionCanny.setText("Canny")
+        self.actionCanny.setStatusTip("Canny")
+        self.actionCanny.setObjectName("actionCanny")
+
+        # Creating Mask action
+        self.actionMask = QtWidgets.QAction(self)
+        self.actionMask.setText("Mask")
+        self.actionMask.setStatusTip("Mask")
+        self.actionMask.setObjectName("actionMask")
+
+        # Adding actions to Lab3 menu
+        self.menu_lab3.addAction(self.actionBlur)
+        self.menu_lab3.addAction(self.actionSobel)
+        self.menu_lab3.addAction(self.actionLaplacian)
+        self.menu_lab3.addAction(self.actionCanny)
+        self.menu_lab3.addAction(self.actionMask)
+
+        # Adding menu3 to menubar
+        self.menubar.addAction(self.menu_lab3.menuAction())
+
+        # Connecting signals to actions
+        self.actionBlur.triggered.connect(self.blur_image)
+        self.actionSobel.triggered.connect(self.sobel_image)
+        self.actionLaplacian.triggered.connect(self.laplacian_image)
+        self.actionCanny.triggered.connect(self.canny_image)
+        self.actionMask.triggered.connect(self.mask_image)
     def show_histogram(self):
         if self.is_gray:
             self.hist = self.build_histogram(self.image, 'black')
@@ -170,7 +222,7 @@ class ImageWindow(QWidget):
             self.g_hist = self.build_histogram(g, 'g')
             self.r_hist = self.build_histogram(r, 'r')
             self.tabula(self.name, self.is_gray, None, self.b_hist, self.g_hist, self.r_hist)
-
+        self.update_image()
     def build_histogram(self, img, color):
         my_hist = np.zeros(256)
         img = img.ravel()
@@ -196,6 +248,7 @@ class ImageWindow(QWidget):
             bytes_per_line = width
             q_img = QImage(self.image.data, width, height, bytes_per_line, QImage.Format_Indexed8)
             self.label.setPixmap(QPixmap.fromImage(q_img))
+            self.update_image()
             self.is_gray = True
 
     def convert_to_hsv(self):
@@ -207,6 +260,7 @@ class ImageWindow(QWidget):
             bytes_per_line = width * 3
             q_img = QImage(self.image.data, width, height, bytes_per_line, QImage.Format_RGB888)
             self.label.setPixmap(QPixmap.fromImage(q_img))
+            self.update_image()
             self.is_gray = False
 
     def convert_to_lab(self):
@@ -218,6 +272,7 @@ class ImageWindow(QWidget):
             bytes_per_line = width * 3
             q_img = QImage(self.image.data, width, height, bytes_per_line, QImage.Format_RGB888)
             self.label.setPixmap(QPixmap.fromImage(q_img))
+            self.update_image()
             self.is_gray = False
 
     def convert_cv_to_qimage(self, image):
@@ -248,6 +303,7 @@ class ImageWindow(QWidget):
             bytes_per_line = width * 3
             q_img = QImage(self.image.data, width, height, bytes_per_line, QImage.Format_RGB888)
             self.label.setPixmap(QPixmap.fromImage(q_img))
+        self.update_image()
 
     def stretch_gray_histogram(self, img):
         hist, bins = np.histogram(img.flatten(), 256, [0, 256])
@@ -276,17 +332,16 @@ class ImageWindow(QWidget):
             bytes_per_line = width * 3
             q_img = QImage(self.image.data, width, height, bytes_per_line, QImage.Format_RGB888)
             self.label.setPixmap(QPixmap.fromImage(q_img))
-
+        self.update_image()
     def equalize_gray_histogram(self, img):
         equ = cv2.equalizeHist(img)
-        self.update_image()
-
+        #self.update_image()
+        return equ
     def update_image(self):
         # Convert the image data to a QImage object
         q_img = self.convert_cv_to_qimage(self.image)
         # Set the converted QImage as the pixmap for the QLabel widget
         self.label.setPixmap(QPixmap.fromImage(q_img))
-
     def negation(self):
         self.image = 255 - self.image
         self.update_image()
@@ -315,6 +370,97 @@ class ImageWindow(QWidget):
         self.image = np.clip(self.image, 0, 255)
         self.image = self.image.astype(np.uint8)
         self.update_image()
+
+    def blur_image(self):
+        number, ok = QInputDialog.getInt(self, "Blur", "Enter a number", value=0, min=0, max=255)
+        if ok:
+            items = ("Isolated", "Reflect", "Replicate")
+            item, ok = QInputDialog.getItem(self, "Blur", "Choose border:", items, 0, False)
+            if ok:
+                if item == "Isolated":
+                    border = cv2.BORDER_ISOLATED
+                elif item == "Reflect":
+                    border = cv2.BORDER_REFLECT
+                else:
+                    border = cv2.BORDER_REPLICATE
+                self.image = self.blur(number, border)
+                self.update_image()
+
+    def blur(self, ksize, border):
+        self.image = cv2.blur(self.image, (ksize, ksize), border)
+        return self.image
+
+    def sobel_image(self):
+        number, ok = QInputDialog.getInt(self, "Sobel", "Enter a number", value=0, min=0)
+        if ok:
+            self.image = self.sobel(number)
+            self.update_image()
+
+    def sobel(self, kernel):
+        sobel_x = cv2.Sobel(self.image, cv2.CV_8UC1, 1, 0, kernel)
+        sobel_y = cv2.Sobel(self.image, cv2.CV_8UC1, 0, 1, kernel)
+        self.image = cv2.hconcat((sobel_x, sobel_y))
+        return self.image
+
+    def laplacian_image(self):
+        number, ok = QInputDialog.getInt(self, "Laplacian", "Enter a number", value=0, min=0)
+        if ok:
+            items = ("Isolated", "Reflect", "Replicate")
+            item, ok = QInputDialog.getItem(self, "Laplacian", "Choose border:", items, 0, False)
+            if ok:
+                if item == "Isolated":
+                    border = cv2.BORDER_ISOLATED
+                elif item == "Reflect":
+                    border = cv2.BORDER_REFLECT
+                else:
+                    border = cv2.BORDER_REPLICATE
+                self.image = self.laplacian(number, border)
+                self.update_image()
+
+    def laplacian(self, kernel, border):
+        ddepth = cv2.CV_8UC1
+        self.image = cv2.Laplacian(self.image, ddepth, ksize=kernel, borderType=border)
+        return self.image
+
+    def canny_image(self):
+        number1, ok = QInputDialog.getInt(self, "Canny", "Enter a number", value=0, min=0)
+        if ok:
+            number2, ok = QInputDialog.getInt(self, "Canny", "Enter a number", value=0, min=0)
+            if ok:
+                self.image = self.canny(number1, number2)
+                self.update_image()
+
+    def canny(self, threshold1, threshold2):
+        self.image = cv2.Canny(self.image, threshold1, threshold2)
+        self.image = cv2.cvtColor(self.image, cv2.COLOR_GRAY2RGB)
+        return self.image
+
+    def mask_image(self):
+        choice, ok = QtWidgets.QInputDialog.getItem(self, "Mask", "Choose mask:", ['0,-1,0\n-1,5,-1\n0,-1,0\n',
+                                                                                   '-1,-1,-1\n-1,9,-1\n-1,-1,-1\n',
+                                                                                   '1,-2,1\n-2,5,-2\n1,-2,1\n'])
+        if ok:
+            if choice == '0,-1,0\n-1,5,-1\n0,-1,0\n':
+                mask = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+            elif choice == '-1,-1,-1\n-1,9,-1\n-1,-1,-1\n':
+                mask = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
+            else:
+                mask = np.array([[1, -2, 1], [-2, 5, -2], [1, -2, 1]])
+            items = ("Isolated", "Reflect", "Replicate")
+            item, ok = QtWidgets.QInputDialog.getItem(self, "Mask", "Choose border:", items, 0, False)
+            if ok:
+                if item == "Isolated":
+                    border = cv2.BORDER_ISOLATED
+                elif item == "Reflect":
+                    border = cv2.BORDER_REFLECT
+                else:
+                    border = cv2.BORDER_REPLICATE
+                self.image = self.mask(mask, border)
+                self.update_image()
+
+    def mask(self, mask, border):
+        self.image = cv2.filter2D(self.image, cv2.CV_8UC1, mask, border)
+        return self.image
 
 class UiMainWindow(QMainWindow):
     def __init__(self, parent=None):
