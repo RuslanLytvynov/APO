@@ -212,6 +212,67 @@ class ImageWindow(QWidget):
         self.actionLaplacian.triggered.connect(self.laplacian_image)
         self.actionCanny.triggered.connect(self.canny_image)
         self.actionMask.triggered.connect(self.mask_image)
+
+        # Creating Lab4 menu
+        self.menu_lab4 = QtWidgets.QMenu(self.menubar)
+        self.menu_lab4.setObjectName("menuLab4")
+        self.menu_lab4.setTitle("Lab4")
+
+        # Creating Erozja action
+        self.action_erozja = QtWidgets.QAction(self)
+        self.action_erozja.setText("Erozja")
+        self.action_erozja.setStatusTip("Erozja")
+        self.action_erozja.setObjectName("actionErozja")
+
+        # Creating Dylacja action
+        self.action_dylacja = QtWidgets.QAction(self)
+        self.action_dylacja.setText("Dylacja")
+        self.action_dylacja.setStatusTip("Dylacja")
+        self.action_dylacja.setObjectName("actionDylacja")
+
+        # Creating Otwarcie action
+        self.action_open = QtWidgets.QAction(self)
+        self.action_open.setText("Otwarcie")
+        self.action_open.setStatusTip("Otwarcie")
+        self.action_open.setObjectName("actionOtwarcie")
+
+        # Creating Zamkniecie action
+        self.action_close = QtWidgets.QAction(self)
+        self.action_close.setText("Zamkniecie")
+        self.action_close.setStatusTip("Zamkniecie")
+        self.action_close.setObjectName("Zamkniecie")
+
+        # Creating Filtracja action
+        self.action_filtration = QtWidgets.QAction(self)
+        self.action_filtration.setText("Filtracja")
+        self.action_filtration.setStatusTip("Filtracja")
+        self.action_filtration.setObjectName("actionFiltracja")
+
+        # Creating Skeletonize action
+        self.action_skeletonize = QtWidgets.QAction(self)
+        self.action_skeletonize.setText("Skeletonize")
+        self.action_skeletonize.setStatusTip("Skeletonize")
+        self.action_skeletonize.setObjectName("actionSkeletonize")
+
+        # Adding actions to Lab4 menu
+        self.menu_lab4.addAction(self.action_erozja)
+        self.menu_lab4.addAction(self.action_dylacja)
+        self.menu_lab4.addAction(self.action_open)
+        self.menu_lab4.addAction(self.action_close)
+        self.menu_lab4.addAction(self.action_filtration)
+        self.menu_lab4.addAction(self.action_skeletonize)
+
+        # Adding menu to menubar
+        self.menubar.addAction(self.menu_lab4.menuAction())
+
+        # Connecting signals to actions
+        self.action_erozja.triggered.connect(self.erozja)
+        self.action_dylacja.triggered.connect(self.dylacja)
+        self.action_open.triggered.connect(self.open)
+        self.action_close.triggered.connect(self.close)
+        self.action_filtration.triggered.connect(self.filtration_image)
+        self.action_skeletonize.triggered.connect(self.skeletonize_image)
+
     def show_histogram(self):
         if self.is_gray:
             self.hist = self.build_histogram(self.image, 'black')
@@ -223,6 +284,7 @@ class ImageWindow(QWidget):
             self.r_hist = self.build_histogram(r, 'r')
             self.tabula(self.name, self.is_gray, None, self.b_hist, self.g_hist, self.r_hist)
         self.update_image()
+
     def build_histogram(self, img, color):
         my_hist = np.zeros(256)
         img = img.ravel()
@@ -462,6 +524,145 @@ class ImageWindow(QWidget):
         self.image = cv2.filter2D(self.image, cv2.CV_8UC1, mask, border)
         return self.image
 
+    def skeletonize_image(self):
+        self.skeletonize()
+        self.update_image()
+
+    def skeletonize(self):
+        img = cv2.imread(self.fullName, 0)
+        ret, img = cv2.threshold(img, 127, 255, 0)
+
+        size = np.size(img)
+        skel = np.zeros(img.shape, np.uint8)
+        element = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
+
+        while True:
+            # Step 2: Open the image
+            open = cv2.morphologyEx(img, cv2.MORPH_OPEN, element)
+            # Step 3: Substract open from the original image
+            temp = cv2.subtract(img, open)
+            # Step 4: Erode the original image and refine the skeleton
+            eroded = cv2.erode(img, element)
+            skel = cv2.bitwise_or(skel, temp)
+            img = eroded.copy()
+            # Step 5: If there are no white pixels left ie.. the image has been completely eroded, quit the loop
+            if cv2.countNonZero(img) == 0:
+                break
+
+        skel = cv2.cvtColor(skel, cv2.COLOR_GRAY2RGB)
+        self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
+        self.image = cv2.hconcat((self.image, skel))
+        return self.image
+    def erozja(self):
+        kernel = np.ones((3, 3), np.uint8)
+        choice, ok = QtWidgets.QInputDialog.getItem(self, "Operacja erozji", "Wybierz otoczenie:",
+                                                    ['4 sasiadow', '8 sasiadow'])
+        if ok:
+            if choice == '4 sasiadow':
+                kernel[0, 0] = 0  # kernel[0][0]
+                kernel[0, 2] = 0
+                kernel[2, 0] = 0
+                kernel[2, 2] = 0
+            self.image[:, :, :3] = cv2.erode(self.image[:, :, :3], kernel, iterations=1)
+            self.update_image()
+
+    def dylacja(self):
+        kernel = np.ones((3, 3), np.uint8)
+        choice, ok = QtWidgets.QInputDialog.getItem(self, "Operacja erozji", "Wybierz otoczenie:",
+                                                    ['4 sasiadow', '8 sasiadow'])
+        if ok:
+            if choice == '4 sasiadow':
+                kernel[0, 0] = 0  # kernel[0][0]
+                kernel[0, 2] = 0
+                kernel[2, 0] = 0
+                kernel[2, 2] = 0
+            self.image[:, :, :3] = cv2.dilate(self.image[:, :, :3], kernel, iterations=1)
+            self.update_image()
+
+    def open(self):
+        kernel = np.ones((3, 3), np.uint8)
+
+        choice, ok = QtWidgets.QInputDialog.getItem(self, "Operacja erozji",
+                                                    "Wybierz otoczenie:", ['4 sasiadow', '8 sasiadow'])
+        if ok:
+            if choice == '4 sasiadow':
+                kernel[0, 0] = 0  # kernel[0][0]
+                kernel[0, 2] = 0
+                kernel[2, 0] = 0
+                kernel[2, 2] = 0
+
+            self.image[:, :, :3] = cv2.erode(self.image[:, :, :3], kernel, iterations=1)
+            self.image[:, :, :3] = cv2.dilate(self.image[:, :, :3], kernel, iterations=1)
+            self.update_image()
+
+    def close(self):
+        kernel = np.ones((3, 3), np.uint8)
+
+        choice, ok = QtWidgets.QInputDialog.getItem(self, "Operacja erozji",
+                                                    "Wybierz otoczenie:", ['4 sasiadow', '8 sasiadow'])
+        if ok:
+            if choice == '4 sasiadow':
+                kernel[0, 0] = 0  # kernel[0][0]
+                kernel[0, 2] = 0
+                kernel[2, 0] = 0
+                kernel[2, 2] = 0
+            self.image[:, :, :3] = cv2.dilate(self.image[:, :, :3], kernel, iterations=1)
+            self.image[:, :, :3] = cv2.erode(self.image[:, :, :3], kernel, iterations=1)
+            self.update_image()
+
+    def filtration(self, mask1, mask2, item):
+        # konstrukcja maski w oparciu o dwie powyższe maski 3x3
+        # wykorzystanie konwolucji do wygenerowania maski 5x5
+        from scipy.signal import convolve2d as conv2  # funkcja konwolucji dwuwymiraowej
+        mH = conv2(mask1, mask2, mode='full')  # mode full zapewnia odpowieni rozmiar maski
+
+        # wykonanie dwu etapowej filtracji z maskami 3x3 (jak w Lab3)
+        res_step1 = cv2.filter2D(self.image, cv2.CV_64F, mask1, item)
+        res_step2 = cv2.filter2D(res_step1, cv2.CV_64F, mask2, item)
+        # cv2_imshow(res_step22)
+
+        # wykonanie jednoetapowej filtracji z maską 5x5
+        res_5x5 = cv2.filter2D(self.image, cv2.CV_64F, mH, item)
+        # cv2_imshow(res_5x5)
+
+        # wizualne porównanie wyników
+        self.image = cv2.hconcat((np.uint8(res_step2), np.uint8(res_5x5)))
+        return self.image
+
+    def filtration_image(self):
+        choice1, ok = QtWidgets.QInputDialog.getItem(self, "Wybór maske wygładzenia",
+                                                     "Wybierz macierz:", ['0,-1,0\n-1,5,-1\n0,-1,0\n',
+                                                                          '-1,-1,-1\n-1,9,-1\n-1,-1,-1\n',
+                                                                          '1,-2,1\n-2,5,-2\n1,-2,1\n'])
+        if ok:
+            if choice1 == "[[ 0,-1, 0]\n[-1, 5,-1]\n[ 0,-1, 0]]":
+                mask1 = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+            elif choice1 == "[[-1,-1,-1]\n[-1, 9,-1]\n[-1,-1,-1]]":
+                mask1 = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
+            mask1 = np.array([[1, -2, 1], [-2, 5, -2], [1, -2, 1]])
+
+            choice2, ok = QtWidgets.QInputDialog.getItem(self, "Wybór maske wyostrzania",
+                                                         "Wybierz macierz:", ['0,-1,0\n-1,5,-1\n0,-1,0\n',
+                                                                              '-1,-1,-1\n-1,9,-1\n-1,-1,-1\n',
+                                                                              '1,-2,1\n-2,5,-2\n1,-2,1\n'])
+            if ok:
+                if choice2 == "[[ 0,-1, 0]\n[-1, 5,-1]\n[ 0,-1, 0]]":
+                    mask2 = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+                elif choice2 == "[[-1,-1,-1]\n[-1, 9,-1]\n[-1,-1,-1]]":
+                    mask2 = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
+                mask2 = np.array([[1, -2, 1], [-2, 5, -2], [1, -2, 1]])
+
+                items = ("Isolated", "Reflect", "Replicate")
+                item, ok = QInputDialog.getItem(self, "Blur",
+                                                "Choose border:", items, 0, False)
+                if ok:
+                    if item == "Isolated":
+                        item = cv2.BORDER_ISOLATED
+                    elif item == "Reflect":
+                        item = cv2.BORDER_REFLECT
+                    item = cv2.BORDER_REPLICATE
+                    self.image = self.filtration(mask1, mask2, item)
+                    self.update_image()
 class UiMainWindow(QMainWindow):
     def __init__(self, parent=None):
         super(UiMainWindow, self).__init__(parent)
