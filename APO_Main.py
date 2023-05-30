@@ -292,6 +292,50 @@ class ImageWindow(QWidget):
         # Connecting signals to actions
         self.action_save.triggered.connect(self.save_image)
 
+        # Creating Lab6 menu
+        self.menu_lab6 = QtWidgets.QMenu(self.menubar)
+        self.menu_lab6.setObjectName("menuLab6")
+        self.menu_lab6.setTitle("Lab6")
+
+        # Creating Threshold action
+        self.action_threshold = QtWidgets.QAction(self)
+        self.action_threshold.setText("Threshold")
+        self.action_threshold.setStatusTip("Threshold")
+        self.action_threshold.setObjectName("actionThreshold")
+
+        # Creating Adaptive Threshold action
+        self.action_adaptive_threshold = QtWidgets.QAction(self)
+        self.action_adaptive_threshold.setText("Adaptive Threshold")
+        self.action_adaptive_threshold.setStatusTip("Adaptive Threshold")
+        self.action_adaptive_threshold.setObjectName("actionAdaptiveThreshold")
+
+        # Creating Otsu action
+        self.action_otsu = QtWidgets.QAction(self)
+        self.action_otsu.setText("Otsu")
+        self.action_otsu.setStatusTip("Otsu")
+        self.action_otsu.setObjectName("actionOtsu")
+
+        # Creating Watershed action
+        self.action_watershed = QtWidgets.QAction(self)
+        self.action_watershed.setText("Watershed")
+        self.action_watershed.setStatusTip("Watershed")
+        self.action_watershed.setObjectName("actionWatershed")
+
+        # Adding actions to Lab6 menu
+        self.menu_lab6.addAction(self.action_threshold)
+        self.menu_lab6.addAction(self.action_adaptive_threshold)
+        self.menu_lab6.addAction(self.action_otsu)
+        self.menu_lab6.addAction(self.action_watershed)
+
+        # Adding menu6 to menubar
+        self.menubar.addAction(self.menu_lab6.menuAction())
+
+        # Connecting signals to actions
+        self.action_threshold.triggered.connect(self.threshold_image)
+        self.action_adaptive_threshold.triggered.connect(self.adaptive_threshold_image)
+        self.action_otsu.triggered.connect(self.otsu_image)
+        self.action_watershed.triggered.connect(self.watershed_image)
+
     def show_histogram(self):
         if self.is_gray:
             self.hist = self.build_histogram(self.image, 'black')
@@ -423,6 +467,7 @@ class ImageWindow(QWidget):
         q_img = self.convert_cv_to_qimage(self.image)
         # Set the converted QImage as the pixmap for the QLabel widget
         self.label.setPixmap(QPixmap.fromImage(q_img))
+
     def negation(self):
         self.image = 255 - self.image
         self.update_image()
@@ -692,6 +737,74 @@ class ImageWindow(QWidget):
         else:
             self.label.setText("Choose an image")
 
+    def threshold_image(self):
+        number1, ok = QInputDialog.getInt(self, "Threshold", "Enter a min", value=0, min=0, max=255)
+        if ok:
+            number2, ok = QInputDialog.getInt(self, "Threshold", "Enter a max", value=255, min=0, max=255)
+        if ok:
+            self.image = self.threshold(self.number1, self.number2)
+            self.update_image()
+
+    def threshold(self, param1, param2):
+        for i in range(len(self.image)):
+            for j in range(len(self.image[i])):
+                for k in range(3):
+                    if (self.image[i][j][k] <= param2 and self.image[i][j][k] >= param1):
+                        self.image[i][j][k] = 255
+                    else:
+                        self.image[i][j][k] = 0
+        return self.image
+
+    def adaptive_threshold_image(self):
+        self.image = self.adaptive_threshold()
+        self.update_image()
+    def adaptive_threshold(self):
+        self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
+        self.image = cv2.adaptiveThreshold(self.image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+        self.image = cv2.cvtColor(self.image, cv2.COLOR_GRAY2BGR)
+        return self.image
+    def otsu_image(self):
+        self.image = self.otsu()
+        self.update_image()
+
+    def otsu(self):
+        self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
+        ret, self.image = cv2.threshold(self.image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        self.image = cv2.cvtColor(self.image, cv2.COLOR_GRAY2BGR)
+        return self.image
+
+    def watershed_image(self):
+        self.image = self.watershed()
+        self.update_image()
+
+    def watershed(self):
+        img_gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
+
+        ret2, thresh = cv2.threshold(img_gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        kernel = np.ones((3, 3), np.uint8)
+        opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=1)
+
+        sure_bg = cv2.dilate(opening, kernel, iterations=1)
+        dist_transform = cv2.distanceTransform(opening, cv2.DIST_L2, 5)
+
+        ret, sure_fg = cv2.threshold(dist_transform, 0.5 * dist_transform.max(), 255, 0)
+        sure_fg = np.uint8(sure_fg)
+
+        unknown = cv2.subtract(sure_bg, sure_fg)
+        ret, markers = cv2.connectedComponents(sure_fg)
+
+        markers = markers + 1
+        markers[unknown == 255] = 0
+
+        markers2 = cv2.watershed(self.image, markers)
+
+        img_gray[markers2 == -1] = 255
+        self.image[markers2 == -1] = [255, 0, 0]
+
+        # wizuaizacja: obraz oryginalny oraz wynik algorytmy watershed
+        self.image = cv2.hconcat((self.image, cv2.applyColorMap(np.uint8(markers2 * 10), cv2.COLORMAP_JET)))
+
+        return self.image
 class UiMainWindow(QMainWindow):
     def __init__(self, parent=None):
         super(UiMainWindow, self).__init__(parent)
