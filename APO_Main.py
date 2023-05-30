@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import cv2
 import numpy as np
 
-
 class HistWindow(QWidget):
     def __init__(self, name, is_gray, hist, b_hist, g_hist, r_hist):
         super(HistWindow, self).__init__()
@@ -262,7 +261,7 @@ class ImageWindow(QWidget):
         self.menu_lab4.addAction(self.action_filtration)
         self.menu_lab4.addAction(self.action_skeletonize)
 
-        # Adding menu to menubar
+        # Adding menu4 to menubar
         self.menubar.addAction(self.menu_lab4.menuAction())
 
         # Connecting signals to actions
@@ -272,6 +271,26 @@ class ImageWindow(QWidget):
         self.action_close.triggered.connect(self.close)
         self.action_filtration.triggered.connect(self.filtration_image)
         self.action_skeletonize.triggered.connect(self.skeletonize_image)
+
+        # Creating Lab5 menu
+        self.menu_lab5 = QtWidgets.QMenu(self.menubar)
+        self.menu_lab5.setObjectName("menuLab5")
+        self.menu_lab5.setTitle("Lab5")
+
+        # Creating Save action
+        self.action_save = QtWidgets.QAction(self)
+        self.action_save.setText("Save")
+        self.action_save.setStatusTip("Save")
+        self.action_save.setObjectName("actionSave")
+
+        # Adding actions to Lab5 menu
+        self.menu_lab5.addAction(self.action_save)
+
+        # Adding menu5 to menubar
+        self.menubar.addAction(self.menu_lab5.menuAction())
+
+        # Connecting signals to actions
+        self.action_save.triggered.connect(self.save_image)
 
     def show_histogram(self):
         if self.is_gray:
@@ -663,6 +682,16 @@ class ImageWindow(QWidget):
                     item = cv2.BORDER_REPLICATE
                     self.image = self.filtration(mask1, mask2, item)
                     self.update_image()
+
+    def save_image(self):
+        file_name, _ = QFileDialog.getSaveFileName(self, "Save file...", "",
+                                                   "Image files (*.jpg *.jpeg *.bmp *.png *.tiff *.tif)")
+        if file_name:
+              cv2.imwrite(file_name, self.image)
+
+        else:
+            self.label.setText("Choose an image")
+
 class UiMainWindow(QMainWindow):
     def __init__(self, parent=None):
         super(UiMainWindow, self).__init__(parent)
